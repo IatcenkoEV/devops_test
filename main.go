@@ -6,18 +6,21 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
+
 	"github.com/go-redis/redis/v8"
 	"github.com/julienschmidt/httprouter"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
-	"time"
 )
 
 type server struct {
-	redis redis.UniversalClient
+	redis  redis.UniversalClient
 	logger *zap.Logger
 }
 
 func main() {
+
 	logger, err := zap.NewProduction()
 	if err != nil {
 		log.Fatal("unable to initialize logger")
@@ -30,16 +33,23 @@ func main() {
 	})
 
 	srv := &server{
-		redis: rdb,
+		redis:  rdb,
 		logger: logger,
 	}
 
 	router := httprouter.New()
 
+	router.GET("/metrics", Metrics(promhttp.Handler()))
 	router.GET("/", srv.indexHandler)
 
 	logger.Info("server started on port 8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
+}
+
+func Metrics(h http.Handler) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		h.ServeHTTP(w, r)
+	}
 }
 
 func (s *server) indexHandler(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {

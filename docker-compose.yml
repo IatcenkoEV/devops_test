@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - 6379:6379
+    command: redis-server --loglevel warning
+  webapp:
+    build: ./
+    environment:
+      - REDIS_ADDR=redis
+    ports:
+      - 8080:8080
+  
+
